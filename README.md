@@ -108,14 +108,17 @@ npm run dev -- --host
 
 ## 发布给同事
 
-推荐 Vercel：
+推荐 GitHub Pages（本项目已内置自动发布工作流）：
 
-1. 推送项目到 GitHub
-2. 在 Vercel 导入仓库
-3. 设置环境变量：
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_ANON_KEY`
-4. 部署后把网址发给同事
+1. 在仓库 `Settings` -> `Secrets and variables` -> `Actions` 中配置：
+   - Repository Variable: `VITE_SUPABASE_URL`
+   - Repository Secret: `VITE_SUPABASE_ANON_KEY`
+2. 在仓库 `Settings` -> `Pages` 中把 Source 设为 `GitHub Actions`
+3. 推送代码到 `main` 分支后，GitHub Actions 会自动构建并发布
+4. 对外访问地址：
+   - `https://gyy-r.github.io/tts-qa-recorder/`
+
+如果只想先看页面（不连接 Supabase），可以不配置这两个变量，页面会进入本地模式。
 
 ## 周复盘建议
 
