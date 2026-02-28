@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import './App.css'
 import {
   categoryLabels,
@@ -31,29 +31,6 @@ interface ClassificationResult {
 interface ProfileDraft {
   tester_device: string
   tester_os: string
-}
-
-interface SpeechRecognitionResultLike {
-  isFinal: boolean
-  0: {
-    transcript: string
-  }
-}
-
-interface SpeechRecognitionEventLike {
-  resultIndex: number
-  results: ArrayLike<SpeechRecognitionResultLike>
-}
-
-interface VoiceRecognition {
-  lang: string
-  continuous: boolean
-  interimResults: boolean
-  onresult: ((event: SpeechRecognitionEventLike) => void) | null
-  onerror: ((event: unknown) => void) | null
-  onend: (() => void) | null
-  start: () => void
-  stop: () => void
 }
 
 const STORAGE_KEYS = {
@@ -205,9 +182,6 @@ function App() {
   const [errorMessage, setErrorMessage] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const [summaryCopied, setSummaryCopied] = useState(false)
-  const [voiceSupported, setVoiceSupported] = useState(false)
-  const [isListening, setIsListening] = useState(false)
-  const recognitionRef = useRef<VoiceRecognition | null>(null)
 
   const sessionMap = useMemo(
     () => new Map(sessions.map((session) => [session.id, session])),
@@ -544,56 +518,6 @@ function App() {
     return () => clearInterval(timerId)
   }, [loadInitialData])
 
-  useEffect(() => {
-    const windowWithSpeech = window as Window & {
-      SpeechRecognition?: new () => VoiceRecognition
-      webkitSpeechRecognition?: new () => VoiceRecognition
-    }
-    const SpeechRecognitionConstructor =
-      windowWithSpeech.SpeechRecognition || windowWithSpeech.webkitSpeechRecognition
-    if (!SpeechRecognitionConstructor) {
-      return
-    }
-
-    const recognition = new SpeechRecognitionConstructor()
-    recognition.lang = 'zh-CN'
-    recognition.continuous = true
-    recognition.interimResults = false
-    recognition.onresult = (event) => {
-      const chunks: string[] = []
-      for (let idx = event.resultIndex; idx < event.results.length; idx += 1) {
-        if (event.results[idx].isFinal) {
-          chunks.push(event.results[idx][0].transcript)
-        }
-      }
-      const transcript = chunks.join(' ').trim()
-      if (!transcript) {
-        return
-      }
-      setObservationDraft((prev) => ({
-        ...prev,
-        issue_description: prev.issue_description
-          ? `${prev.issue_description} ${transcript}`
-          : transcript,
-      }))
-    }
-    recognition.onerror = () => {
-      setIsListening(false)
-      setErrorMessage('语音录入失败，请重试或手动输入。')
-    }
-    recognition.onend = () => {
-      setIsListening(false)
-    }
-
-    recognitionRef.current = recognition
-    setVoiceSupported(true)
-
-    return () => {
-      recognition.stop()
-      recognitionRef.current = null
-    }
-  }, [])
-
   const handleCreateProfile = async () => {
     if (!sessionInput.reporter_name.trim() || !sessionInput.tester_device.trim()) {
       setErrorMessage('测试人/账号和设备必填。')
@@ -831,21 +755,6 @@ function App() {
         feeling_other: nextFeelingTags.includes(feelingOtherOption) ? prev.feeling_other : '',
       }
     })
-  }
-
-  const handleToggleVoiceInput = () => {
-    if (!recognitionRef.current) {
-      setErrorMessage('当前浏览器不支持语音录入。')
-      return
-    }
-    setErrorMessage('')
-    if (isListening) {
-      recognitionRef.current.stop()
-      setIsListening(false)
-      return
-    }
-    recognitionRef.current.start()
-    setIsListening(true)
   }
 
   const handleSubmitIssue = async () => {
@@ -1220,17 +1129,6 @@ function App() {
               </label>
               <label className="full-width">
                 问题描述*
-                <div className="voice-row">
-                  <button
-                    type="button"
-                    className="secondary"
-                    onClick={handleToggleVoiceInput}
-                    disabled={!voiceSupported}
-                  >
-                    {isListening ? '⏹ 停止语音录入' : '🎤 语音录入'}
-                  </button>
-                  {!voiceSupported && <span className="hint">当前浏览器不支持语音录入</span>}
-                </div>
                 <textarea
                   value={observationDraft.issue_description}
                   onChange={(event) =>
@@ -1239,6 +1137,7 @@ function App() {
                       issue_description: event.target.value,
                     }))
                   }
+                  placeholder="小白刚说太棒啦，你一下就答对了，真是个数学天才。夸的太过头了"
                 />
               </label>
               <p className="hint">
@@ -1299,7 +1198,7 @@ function App() {
                   其他主观感受
                   <textarea
                     className="other-feeling-box"
-                    rows={4}
+                    rows={6}
                     value={observationDraft.feeling_other}
                     onChange={(event) =>
                       setObservationDraft((prev) => ({
@@ -1307,7 +1206,6 @@ function App() {
                         feeling_other: event.target.value,
                       }))
                     }
-                    placeholder="请填写其他主观感受（建议至少60字）"
                   />
                 </label>
               )}

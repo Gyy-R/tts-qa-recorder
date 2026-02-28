@@ -210,15 +210,8 @@ button.secondary {
   margin-top: 10px;
 }
 
-.voice-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
 .other-feeling-box {
-  min-height: 120px;
+  min-height: 180px;
 }
 
 .profile-list {
